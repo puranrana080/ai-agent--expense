@@ -4,10 +4,14 @@
   "description": "",
   "license": "ISC",
   "author": "puran",
-  "type": "commonjs",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start":"node agent.js"
+    "start": "node agent.js",
+    "dev": "node --env-file=.env agent.js"
+  },
+  "dependencies": {
+    "groq-sdk": "^0.34.0"
   }
 }

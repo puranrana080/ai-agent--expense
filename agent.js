@@ -1,6 +1,7 @@
 import readline from "node:readline/promises";
 import Groq from "groq-sdk";
 const expenseDB = [];
+const incomeDB = [];
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -12,10 +13,12 @@ async function callAgent() {
   const messages = [
     {
       role: "system",
-      content: `You are Josh, a personel finance assistant. Your task is to assist user with their expenses, balances and financial planning.
+      content: `You are Josh, a personal finance assistant. Your task is to assist user with their expenses, balances and financial planning.
       You have access to following tools:
-      1. getTotalExpense({from,to}):string //get total expense for a time period
-      2. addExpense({name,amount}):string  //add new expense to the expense db
+      1. getTotalExpense({from,to}):string //get total expense for a time period.
+      2. addExpense({name,amount}):string  //add new expense to the expense db.
+      3. addIncome({name,amount}):string //add new income to database.
+      4. getMoneyBalance():string //get remaining money balance from database.
         currnt datetime: ${new Date().toUTCString()}`,
     },
   ];
@@ -24,6 +27,7 @@ async function callAgent() {
   while (true) {
     const question = await rl.question("User: ");
     if (question === "bye") {
+         console.log("Assistant: Goodbye! Keep tracking your expenses wisely! 💰");
       break;
     }
     messages.push({
@@ -77,6 +81,33 @@ async function callAgent() {
               },
             },
           },
+          {
+            type: "function",
+            function: {
+              name: "addIncome",
+              description: "Add new income entry to the income database",
+              parameters: {
+                type: "object",
+                properties: {
+                  name: {
+                    type: "string",
+                    description: "Name of the Income. e.g. Got salery",
+                  },
+                  amount: {
+                    type: "string",
+                    description: "Amount of the income",
+                  },
+                },
+              },
+            },
+          },
+          {
+            type: "function",
+            function: {
+              name: "getMoneyBalance",
+              description: "get remaining money balance from database",
+            },
+          },
         ],
       });
 
@@ -96,7 +127,12 @@ async function callAgent() {
           result = getTotalExpense(JSON.parse(functionArgs));
         } else if (functionName === "addExpense") {
           result = addExpense(JSON.parse(functionArgs));
+        } else if (functionName === "addIncome") {
+          result = addIncome(JSON.parse(functionArgs));
+        } else if (functionName == "getMoneyBalance") {
+          result = getMoneyBalance();
         }
+
         messages.push({
           role: "tool",
           content: result,
@@ -105,7 +141,7 @@ async function callAgent() {
       }
     }
   }
-  rl.close()
+  rl.close();
 }
 
 callAgent();
@@ -119,6 +155,17 @@ function getTotalExpense({ from, to }) {
 }
 
 function addExpense({ name, amount }) {
-  expenseDB.push({ name, amount });
-  return "Added to the database";
+  expenseDB.push({ name, amount: Number(amount) });
+  return "Added to the expense database";
+}
+
+function addIncome({ name, amount }) {
+  incomeDB.push({ name, amount: Number(amount) });
+  return "Added to the income database";
+}
+function getMoneyBalance() {
+  const totalIncome = incomeDB.reduce((acc, item) => acc + item.amount, 0);
+  const totalExpense = expenseDB.reduce((acc, item) => acc + item.amount, 0);
+
+  return `${totalIncome - totalExpense} INR`;
 }
